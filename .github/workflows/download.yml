@@ -1,13 +1,12 @@
-name: Download and Split to 45MB Parts
-
+name: File Downloader
 on:
   workflow_dispatch:
     inputs:
       url:
-        description: 'لینک مستقیم دانلود فایل'
+        description: 'Direct download link'
         required: true
       filename:
-        description: 'نام فایل خروجی (اختیاری - از لینک استخراج می‌شود)'
+        description: 'Output filename (optional)'
         required: false
         default: ''
 
@@ -21,34 +20,35 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set filename
+      - name: Set filename and clean URL
         id: vars
         run: |
+          URL="${{ github.event.inputs.url }}"
+          CLEAN_URL="${URL%%\?*}"
           if [ -z "${{ github.event.inputs.filename }}" ]; then
-            FILENAME=$(basename "${{ github.event.inputs.url }}" | cut -d '?' -f1)
+            FILENAME=$(basename "$CLEAN_URL")
           else
             FILENAME="${{ github.event.inputs.filename }}"
           fi
+          echo "clean_url=$CLEAN_URL" >> $GITHUB_OUTPUT
           echo "filename=$FILENAME" >> $GITHUB_OUTPUT
 
-      - name: Install 7zip
-        run: sudo apt-get update && sudo apt-get install -y p7zip-full
+      - name: Install aria2 and 7zip
+        run: sudo apt-get update && sudo apt-get install -y aria2 p7zip-full
 
-      - name: Download file
+      - name: Download file with aria2
         run: |
           mkdir -p downloads
           cd downloads
-          curl --fail -L --retry 3 -o "${{ steps.vars.outputs.filename }}" "${{ github.event.inputs.url }}"
-          
-      - name: Split file into 45 MB parts using 7zip
+          aria2c -x 4 -s 4 -o "${{ steps.vars.outputs.filename }}" "${{ steps.vars.outputs.clean_url }}"
+
+      - name: Split into 45 MB parts using 7zip
         run: |
           FILENAME="${{ steps.vars.outputs.filename }}"
           PARTS_DIR="downloads/${FILENAME}.parts"
           mkdir -p "$PARTS_DIR"
           cd "$PARTS_DIR"
-          # ایجاد آرشیو 7z بدون فشرده‌سازی (store) با تقسیم به قطعات ۴۵ مگابایتی
           7z a -v45m -mx0 "../${FILENAME}.7z" "../${FILENAME}"
-          # حذف فایل اصلی و فایل .7z پایه (فقط پارت‌ها می‌مانند)
           rm -f "../${FILENAME}" "../${FILENAME}.7z"
 
       - name: Commit and push parts
