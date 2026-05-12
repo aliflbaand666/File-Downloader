@@ -75,7 +75,7 @@ jobs:
           if [ "$SIZE" -gt "$THRESHOLD" ]; then
             echo "File is $((SIZE / 1024 / 1024))MB - splitting into 45MB parts"
             BASENAME="${FILENAME%.*}"
-            PARTS_DIR="${BASENAME}.parts"
+            PARTS_DIR="${BASENAME}"
             mkdir -p "$PARTS_DIR"
             zip -s 45m -j "${PARTS_DIR}/${BASENAME}.zip" "$FILENAME"
             rm "$FILENAME"
