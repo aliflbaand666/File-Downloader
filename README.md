@@ -1,9 +1,3 @@
-# AVASAM Downloader
-
-https://avasam.ir
-
-
----
 
 ## فایل های دانلود شده در گیتهاب شما :
 
