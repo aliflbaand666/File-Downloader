@@ -1,4 +1,4 @@
-name: Direct-Download
+name: Download and Upload to Repo
 
 on:
   workflow_dispatch:
