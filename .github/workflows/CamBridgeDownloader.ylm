@@ -1,1 +1,38 @@
+      - name: Download with aria2 (curl fallback)
+        run: |
+          mkdir -p downloads
+          cd downloads
+          URL="${{ steps.vars.outputs.clean_url }}"
+          FILENAME="${{ steps.vars.outputs.filename }}"
 
+          UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+          # استخراج پروتکل و دامنه از لینک برای Referer
+          REFERER="$(echo "$URL" | sed -E 's|(https?://[^/]+).*|\1|')/"
+
+          echo "Trying aria2c..."
+          if aria2c \
+            --split=2 \
+            --max-connection-per-server=2 \
+            --min-split-size=20M \
+            --max-tries=3 \
+            --retry-wait=5 \
+            --timeout=60 \
+            --connect-timeout=30 \
+            --allow-overwrite=true \
+            --auto-file-renaming=false \
+            --user-agent="$UA" \
+            --header="Referer: $REFERER" \
+            -o "$FILENAME" \
+            "$URL" 2>/dev/null && [ -s "$FILENAME" ]; then
+            echo "aria2c success"
+          else
+            echo "aria2c failed, trying curl..."
+            rm -f "$FILENAME" "$FILENAME.aria2"
+            curl -L \
+              --retry 3 \
+              --retry-delay 5 \
+              -A "$UA" \
+              -H "Referer: $REFERER" \
+              -o "$FILENAME" \
+              "$URL" && echo "curl success" || echo "Download failed"
+          fi
